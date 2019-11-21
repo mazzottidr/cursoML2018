@@ -1,0 +1,409 @@
+---
+title: "Modelos de classificação não-supervisionados"
+author: "Diego Mazzotti"
+date: "09/11/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Introdução
+
+Diferentemente dos modelos de aprendizagem de máquina supervisionados, os **modelos de classificação não supervisionados** não necessitam da definição de um desfecho para treinar os modelos de classificação. Modelos não-supervisionados são desenvolvidos para identificar padrões nos dados que são definidos por meio das variáveis que caracterizam estes dados. Estes modelos podem ser muito úteis quando coletamos muitas informações de um determinado fenômeno e queremos entender se existem observações que compartilham alguns padrões. Por exemplo, em algumas doenças em que as características são muito heterogêneas, será que é possível usar dados de pacientes que permitam o agrupamento de indivíduos que compartilham determinada característica da doença? Outros exemplos mais comuns em genética e biologia molecular envolvem o agrupamento de indivíduos com base nos resultados de sua genotipagem em larga escala, revelando sua potencial ancestralidade genética, ou o agrupamento de indivíduos de acordo com o padrão global de expressão gênica em um determinado tecido.
+
+Neste tutorial vamos explorar duas estratégias de identificação de padrões nos dados de maneira não-supervisionada: **clustering** e **redução de dimensionalidade**. Estas estratégias não são necessariamente excludentes; em dados multidimensionais (muitas variáveis são mensuradas em um indivíduo), muitas vezes é necessário realizar uma redução de dimensionalidade antes de tentar agrupar observações por meio do clustering. Além disso, é possível utilizar modelos de classificação não-supervisionada para criar desfechos que podem ser usados posteriormente por métodos de classificação supervisionados. Um exemplo é a realização de um estudo exploratório de expressão gênica que, após análise de agrupamento, identificou 3 grupos de indivíduos de acordo com o perfil de expressão. Estes grupos que foram identificados podem servir como desfecho para treinar modelos supervisionados capazes de classificar novos indivíduos com base em sua expressão gênica.
+
+Os métodos não supervisionados que vamos explorar neste tutorial são:  
+
+- **K-means**
+- **Análise de componentes principais** (*principal component analysis*)
+
+
+### Acesso e preparação dos dados
+
+Os dados que vamos utilizar neste tutorial são de um experimento conduzido pela NASA para verificar o efeito de uma viagem espacial sobre a expressão gênica de *Drosophila melanogaster*. Neste experimentos, um total de 18 amostras de moscas adultas ou larvas, foram distribuidas em dois grupos: um grupo que foi submetido a uma viagem espacial por aproximadamente 13 dias, e um grupo que permaneceu na Terra. Nós não teremos acessos aos grupos (larva/adulto ou viagem/Terra) - **nosso objetivo é tentar identificar padrões de expressão gênica usando um total de 18952 sondas de microarray, para tentar classificar as 18 amostras de mosca de acordo com perfis semelhantes de expressão**. Mais informações sobre o experimento e a origem dos dados é apresentado neste link: https://genelab-data.ndc.nasa.gov/genelab/accession/GLDS-3
+
+Vamos fazer o download dos dados, já previamente formatados, onde cada observação (amostra) é representada nas linhas, e cada gene é representado nas colunas. Os dados também já foram normalizados, de acordo com práticas padrão de análise de dados de microarray de expressão. Estas práticas não serão abordadas neste curso mas devem ser levadas em consideração na análise real dos dados.
+
+- Faça o download dos dados neste link ([space_flies.txt](https://www.dropbox.com/s/va6ts6zrpeclr9h/space_flies.txt?dl=1)), crie um diretório chamado `ML_NaoSupervisionado`, altere o diretório de trabalho para esta nova pasta, e faça o upload do arquivo `space_flies.txt` para este diretório no RStudio. Em seguida, vamos carregar alguns pacotes que serão necessários, bem como carregar os dados no R:
+
+```{r, eval=F, echo=T}
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(GGally)
+
+# Importe os dados para o R (pode demorar alguns segundos, pois temos mais de 18 mil colunas)
+dados_flies <- read.table("space_flies.txt", header = T)
+
+# Ispecione o número de dimensões (linhas e colunas) do objeto
+dim(dados_flies)
+
+# Inspecione as primeiras 5 linhas e 5 colunas
+dados_flies[1:5,1:5]
+
+```
+
+Como descrito brevemente, as linhas neste arquivo representam as diferentes amostras, e as colunas representam as sondas do microarray (genes). Neste tutorial não estamos interessados no significado dos genes, portanto não há necessidade de fazer a anotação das sondas para nomes de genes.
+
+Antes de explorar os diferentes modelos de classificação não-supervisionados utilizando todos os dados, vamos primeiramente selecionar um número reduzindo de genes apenas para explorarmos os dados. Vamos criar um objeto apenas com 5 genes, escolhidos aleatoriamente entre os mais de 18 mil, para realizarmos algumas visualizações:
+
+```{r, eval=F, echo=T}
+
+#Definir regra da aleatoriedade:
+set.seed(1234)
+# Selecionar 5 colunas aleatoriamente entre a coluna 1 e o número de colunas do objeto 'dados_flies' (18952)
+selecionar_colunas <- sample(1:ncol(dados_flies), size = 5)
+
+# Criar um novo objeto apenas com estas colunas:
+dados_flies_5genes <- dados_flies[,selecionar_colunas]
+
+# Inspecionar o objeto resultante
+dados_flies_5genes
+
+```
+
+
+### Análise exploratória dos dados
+
+Ao observar os valores normalizados de expressão destes 5 genes das 18 amostras, é possível identificar alguns padrões. Vamos realizar alguns gráficos exploratórios para examinar melhor a distribuição da expressão gênica nestas amostras e tentar identificar mais claramente estes padrões.
+
+```{r, eval=F, echo=T}
+# Usar o ggplot para construir um heatmap da expressão dos genes em cada uma das 18 amostras
+
+# Organizar os dados
+dados_flies_5genes_melted <- melt(as.matrix(dados_flies_5genes))
+
+# Criar o gráfico
+heatmap1 <- ggplot(dados_flies_5genes_melted, aes(Var1, Var2)) +
+  geom_tile(aes(fill = value), color = "white") +
+  scale_fill_gradient(low = "white", high = "darkred") +
+  ylab("Genes") +
+  xlab("Amostras") +
+  theme(legend.title = element_text(size = 10),
+        legend.text = element_text(size = 12),
+        plot.title = element_text(size=16),
+        axis.title=element_text(size=14,face="bold"),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(fill = "Expressão")
+
+# Observar o heatmap
+heatmap1
+
+```
+
+O heatmap parece indicar que existem alguns padrões na expressão gênica das amostras. Isso é um indicativo que métodos não supervisionados sejam capazes de identificar este padrão e consequentemente agrupar as amostras de acordo com os níveis de expressão gênica.
+
+Outra visualização importante que ajuda a estabelecer se os dados permitem o agrupamento não-supervisionado das amostras é o gráfico de dispersão para cada par de variável. Vamos realizar esta visualização a seguir:
+
+```{r, eval=F, echo=T}
+# Visualizar a correlação entre cada par de genes usando ggpairs
+ggpairs(dados_flies_5genes)
+
+```
+
+De maneira semelhante, alguns padrões parecem chamar a atenção - alguns genes são fortemente positivamente correlacionados; outros são fortemente negativamente correlacionados; outros parecem não ser correlacionados. Vamos observar com mais detalhes a correlação apenas entre os dois primeiros genes (`X1629145_at` e `X1631290_at`):
+
+```{r, eval=F, echo=T}
+# Visualizar a correlação entre os genes X1629145_at e X1631290_at
+ggplot(dados_flies_5genes, aes(x=X1629145_at, y=X1631290_at)) +
+        geom_point()
+
+```
+
+Será que é possível agrupar as amostras de acordo com a expressão apenas destes 2 genes?
+
+### K-means
+
+O método K-means é um dos métodos mais populares de classificação não-supervisionada. Este algoritmo baseia-se na distância entre cada observação e um valor chamado "centroide", que define o centro de cada *cluster* ou grupo em um espaço bidimensional. Este é um algoritmo iterativo, ou seja, os valores dos centroides são estabelecidos, as distâncias entre cada observação e o centroide são calculados, e os pontos mais próximos ao centroide 1 serão agrupados no cluster 1, e os pontos mais próximos do centroide 2 serão agrupados no cluster 2, e assim por diante. Na segunda iteração, novos valores dos centroides são estabelecidos com base na média das observações agrupadas em cada centroide. Em seguida as observações são reagrupadas de acordo com a distância entre estes novos centroides. As iterações continuam até que as observações não mudam de grupo, mesmo após a atualização dos centroides.
+
+Um das características deste método é a necessidade de definir o número de grupos antes da realização das análises. Para definir o número de grupos, é necessário observar como os dados estão distribuídos (por exemplo por meio dos gráficos de dispersão), ou então usar um algoritmo que avalia o resultado do agrupamento com diferentes números de grupos, e identifica qual o mínimo número de grupos que minimiza a distancia média entre cada ponto e os centroides correspondentes.
+
+Ao observar o gráfico de dispersão da expressão dos genes `X1629145_at` e `X1631290_at`, parece que conseguimos identificar 3 grupos. Vamos rodar o algoritmo K means com 3 clusters, nestes dois genes e ver os resultados:
+
+```{r, eval=F, echo=T}
+# Determinar um objeto apenas com os genes X1629145_at e X1631290_at
+dados_flies_2genes <- select(dados_flies_5genes, X1629145_at, X1631290_at)
+
+# Rodar o algoritmo K means, para 3 grupos
+set.seed(1234) # por ser um algoritmo iterativo, diferentes configurações podem gerar diferentes resultados
+clusters_kmean_k3_2genes <- kmeans(x = dados_flies_2genes, centers = 3)
+
+# Atribuir os resultados da classificação no objeto com os dados:
+dados_flies_2genes$Grupos_k3 <- as.factor(clusters_kmean_k3_2genes$cluster)
+
+# Visualizar os resultados, colorindo os pontos de acordo com os grupos resultantes:
+ggplot(dados_flies_2genes, aes(x=X1629145_at, y=X1631290_at, shape=Grupos_k3, color=Grupos_k3)) +
+        geom_point()
+
+```
+
+Parece que o K means foi capaz de separar adequadamente 3 grupos de amostras, com base na expressão gênica de apenas 2 genes. O que acontece se utilizarmos 4 grupos ao invés de 3?
+
+```{r, eval=F, echo=T}
+# Rodar o algoritmo K means, para 4 grupos
+set.seed(1234)
+clusters_kmean_k4_2genes <- kmeans(x = dados_flies_2genes, centers = 4)
+
+# Atribuir os resultados da classificação no objeto com os dados:
+dados_flies_2genes$Grupos_k4 <- as.factor(clusters_kmean_k4_2genes$cluster)
+
+# Visualizar os resultados, colorindo os pontos de acordo com os grupos resultantes:
+ggplot(dados_flies_2genes, aes(x=X1629145_at, y=X1631290_at, shape=Grupos_k4, color=Grupos_k4)) +
+        geom_point()
+
+```
+
+Utilizando 4 grupos também foi possível identificar uma classificação razoável. Mas como determinar quantos grupos devemos selecionar? Para realizar esta tarefa, é necessário rodar o algoritmo em um intervalo de grupos que parece ser razoável para os dados. O número máximo de grupos sempre será o número total de amostras (uma amostra por grupo), o número mínimo sempre será 1 (um grupo que engloba todas as amostras). No entanto estas definições extremas não são desejáveis. Para esse exemplo, vamos definir o intervalo entre 1 e 6 grupos, e em seguida vamos rodar o K means 5 vezes, uma vez para cada número de grupos entre 1 e 6. Em seguida vamos extrair uma medida chamda *within sum of squares errors* ou `wss`, que representa a diferença média total entre o centroide e cada ponto. Pra determinar o melhor número de grupos, vamos tentar identificar qual mínimo número de grupos que mantém um baixo **wss**, e que o próximo número de grupos não reduz o **wss** tanto. Para realizar essa tarefa, vamos usar um **for loop**:
+
+
+```{r, eval=F, echo=T}
+# Rodar o algoritmo K means, para 1, 2, 3, 4, 5 e 6 grupos
+
+intervalo_k <- 1:6 # definir o número de grupos que serão rodados
+
+wss <- 0 # inicializar um objeto que vai armazenar o wss
+
+for (k in intervalo_k) {
+        
+        km.out <- kmeans(x = dados_flies_2genes[,1:2], centers = k) # para cada iteração, rodar o k means para o número "k" e salvar o resultado em km.out. Selecionar apenas as colunas 1 e 2
+        wss[k] <- km.out$tot.withinss # salvar o resultado do wss dessa iteração no objeto 'wss' indexado para a respectiva iteração
+        
+}
+
+
+# Visualizar os resultados em um gráfico
+ggplot(data=data.frame(intervalo_k, wss), aes(x=intervalo_k, y=wss, group=1)) +
+        geom_line() +
+        geom_point() +
+        xlab("Número de clusters") +
+        ylab("WSS") +
+        scale_x_continuous(breaks=c(1:6))
+
+
+```
+
+**Ao observar o resultado deste gráfico, quantos grupos são adeqados para descrever os dados de expressão destas amostras caracterizados por estes 2 genes?**
+
+Até o momento, nós apenas utilizamos 2 genes. Vamos fazer a mesma avaliação, agora com 5 genes, e identificar qual é número mais adequado de grupos:
+
+```{r, eval=F, echo=T}
+# Rodar o algoritmo K means, para 1, 2, 3, 4, 5 e 6 grupos, usando 5 genes
+
+intervalo_k <- 1:6
+
+wss <- 0
+
+for (k in intervalo_k) {
+        
+        km.out <- kmeans(x = dados_flies_5genes[,1:5], centers = k) # A única diferença é que estamos usando os dados para 5 genes. Note a seleção das colunas 1 a 5
+        wss[k] <- km.out$tot.withinss
+        
+}
+
+
+# Visualizar os resultados em um gráfico
+ggplot(data=data.frame(intervalo_k, wss), aes(x=intervalo_k, y=wss, group=1)) +
+        geom_line() +
+        geom_point() +
+        xlab("Número de clusters") +
+        ylab("WSS") +
+        scale_x_continuous(breaks=c(1:6))
+
+
+```
+
+Ao observar este gráfico e comparar com o anterior, parece que ao adicionar mais genes, é possível ter um pouco mais de resolução para identificar mais grupos. Mas ainda assim 3 ou 4 grupos parece ser o número ideal.
+
+Por fim, o que acontece se realizarmos o K-means em todos os mais de 18 mil genes:
+
+
+```{r, eval=F, echo=T}
+# Rodar o algoritmo K means, para 1, 2, 3, 4, 5 e 6 grupos, usando todos os genes
+
+intervalo_k <- 1:6
+
+wss <- 0
+
+for (k in intervalo_k) {
+        
+        km.out <- kmeans(x = dados_flies, centers = k) # incluindo agora todos os genes
+        wss[k] <- km.out$tot.withinss
+        
+}
+
+
+# Visualizar os resultados em um gráfico
+ggplot(data=data.frame(intervalo_k, wss), aes(x=intervalo_k, y=wss, group=1)) +
+        geom_line() +
+        geom_point() +
+        xlab("Número de clusters") +
+        ylab("WSS") +
+        scale_x_continuous(breaks=c(1:6))
+
+```
+
+De maneira interessante, parece que ao utlizar todos os genes que foram calculados, o K-means é um algoritmo que consegue agrupar de maneira muito clara 2 grupos distintos com base na expressão gênica. Vamos rodar o algoritmo novamente com k=2, e desta vez salvar o agrupamento e visualizar em gráficos:
+
+```{r, eval=F, echo=T}
+# Rodar o algoritmo K means, para 2 grupos em todos os genes
+set.seed(1234)
+clusters_kmean_k2_todos <- kmeans(x = dados_flies, centers = 2)
+
+# Atriburi os resultados da classificação no objeto com os dados:
+dados_flies_comResutados <- dados_flies # criar novo objeto para não sobreescrever dados originais
+dados_flies_comResutados$Grupos_k2 <- as.factor(clusters_kmean_k2_todos$cluster)
+
+# Visualizar os resultados de algumas combinacÕes de genes, colorindo os pontos de acordo com os grupos resultantes:
+ggplot(dados_flies_comResutados, aes(x=X1629145_at, y=X1631290_at, shape=Grupos_k2, color=Grupos_k2)) +
+        geom_point()
+
+ggplot(dados_flies_comResutados, aes(x=X1616608_a_at, y=X1622892_s_at, shape=Grupos_k2, color=Grupos_k2)) +
+        geom_point()
+
+ggplot(dados_flies_comResutados, aes(x=X1623207_at, y=X1640235_at, shape=Grupos_k2, color=Grupos_k2)) +
+        geom_point()
+
+```
+
+Olhando a dispersão de alguns genes parece que algumas combinações de genes são muito mais relevantes do que outras para separar amostras que seguem estes padrões. Esse resultado é esperado, pois não são necessariamente todos os genes que contribuem para potenciais diferenças nos padrões entre as amostras.
+
+Uma desvatagem do K-means, especialmente quando temos muitas variáveis, é a dificuldade de entender quais são as variáveis que mais contribuem para as diferenças entre os grupos. Além disso, é dificil de visualizar um resultado quando muitas variáveis são incluídas; como vimos acima, é necessário fazer gráficos de 2 em 2 genes.
+
+Uma maneira de tentar contornar estas limitações é utilizar técnicas de redução de dimensionalidade. A que vamos discutir neste tutorial é chamada análise de componentes principais.
+
+
+### Análise de componentes principais (PCA)
+
+A análise de componentes principais é uma estratégia de redução de dimensionalidade dos dados. Esta técnica é extremamente útil quando o número de variáveis excede o número de observações (como é o caso deste exemplo). O PCA permite identificar, quantificar e visualizar os principais contribuintes da variabilidade dos dados, e normalmente é utilizada como análise exploratória para entender quais as variáveis que contribuem mais para a variabilidade dos dados. Embora a PCA não seja um método de classificação, é possível utilizar métodos como o K-means com os resultados do PCA, chamados de componentes principais (PCs). Assim, é possível realizar a classificação não-supervisionada de dados utilizando variáveis que representam a maior parte da variabilidade dos dados, ao invés das variáveis em si.
+
+O número de PCs é sempre menor que o número total de variáveis, e o resultado da PCA sempre ordena os PCs de acordo com a sua contribuição para a variabilidade. Assim, o PC1 sempre vai explicar mais variabilidade que o PC2 e assim por diante. Dependendo da distribuição dos dados, um número relativamente reduzido de PCs é capaz de explicar a maioria da variabilidade dos dados. Assim, em dados multidiminesionais, é preferível explorá-los por meio destas representações. Outra característica da PCA é que em geral os PCs resultantes não são correlacionados, o que indica que a combinação dos PCs, de maneira não redundante, representa todos as variáveis. Se duas variáveis são altamente correlacionadas, é bem provável que elas irão contribuir para o mesmo PC.
+
+Vamos calcular os componentes principais que representarão os dados de expressão gênica de mais de 18 mil genes em nossas 18 amostras, e observar quantos PCs são necessários para explicar a variabilidade de nossos dados:
+
+```{r, eval=F, echo=T}
+# Cáclulo dos PCs usando todos os genes
+flies.todos.pca <- PCA(dados_flies, graph = FALSE, ncp = Inf)
+# Observar a proporção da variabilidade explicada
+flies.todos.pca$eig
+```
+
+É possível observar que com apenas 9 PCs, é possível explicar mais de 90% de toda variabilidade da expressão gênica nestas 18 amostras, e um total de 17 PCs é capaz de explicar virtualmente toda a variabilidade. Reduzimos a dimensionalidade dos dados em muitas vezes!
+
+Para identificar qual a contribuição de cada variável (gene) para cada PC, é possível observar os resultados do objeto `flies.todos.pca$var$contrib`. Essa tabela indica a correlação entre o PC e a expressão de cada gene. Vamos salvar este objeto e ordenar as linhas para mostrar quais genes estão contribuindo mais para os PCs que mais explicam os dados:
+
+```{r, eval=F, echo=T}
+# Salvar correlação entre PCs e variáveis (genes)
+contrib <- data.frame(flies.todos.pca$var$contrib)
+
+# Observar a proporção de contribuição das variáveis, ordenado para PC1 (Dim.1)
+head(contrib[order(contrib$Dim.1, decreasing = T),])
+```
+
+Vamos fazer o gráfico de dispersão relacionando os dois primeiros componentes principais. Como estes representam a maioria da variabilidade dos dados (combinados, aproximadamente 64.5%), podemos garantir que uma estrutura nestes dados possivelmente explicará algo sobre estes dados. Em dados de expressão gênica, essa representação pode identificar algum fenômeno biológico esperado (ex: moscas que foram para o espaço), ou técnico não esperado (ex: problemas na extração de RNA).
+
+```{r, eval=F, echo=T}
+# Gráfico do PC1 e PC2 calculados usando todos os dados:
+ggbiplot(flies.todos.pca, var.axes=F)
+# Obs: var.axes está definido como F pois temos muitas variáveis; a visualização dos dados torna impossível. Mas este parâmetro mostra setas no gráfico representando a direção da influência da variável sobre cada PC
+
+```
+
+Ao observar este gráfico, é possível perceber que, de acordo com os genes que mais contribuem para a variabilidade dos dados, é possível agrupar as amostras em potencialmente 4 grupos. Vamos confirmar isso, primeiramente criando um objeto com todos os componentes principais calculados, e em seguida realizando K-means nos PCs, variando o número de clusters de 1 a 10:
+
+
+```{r, eval=F, echo=T}
+# Salvar objeto com os valores de todos os PCs dos indivíduos
+pcs_todos <- data.frame(flies.todos.pca$ind$coord)
+
+# Rodar o algoritmo K means, para 1 a 10 grupos, usando os PCs
+
+intervalo_k <- 1:10
+
+wss <- 0
+
+for (k in intervalo_k) {
+        
+        km.out <- kmeans(x = pcs_todos, centers = k)
+        wss[k] <- km.out$tot.withinss
+        
+}
+
+
+# Visualizar os resultados em um gráfico
+ggplot(data=data.frame(intervalo_k, wss), aes(x=intervalo_k, y=wss, group=1)) +
+        geom_line() +
+        geom_point() +
+        xlab("Número de clusters") +
+        ylab("WSS") +
+        scale_x_continuous(breaks=c(1:10))
+
+```
+
+O padrão do gráfico resultante mostra que embora a classificação com 2 grupos seja a mais eficiente, a classificação com 4 grupos é capaz de identificar estrutura nos dados, uma vez que ao adicionar o quinto grupo, a medida `wss` aumentou, ou seja, a distância média entre os pontos e os centroides aumentaram ao adicionar o quinto grupo. Vamos agora fazer o gráfico novamente do primeiro e segundo PCs, mas desta acrescentando as cores para 2 ou 4 grupos:
+
+```{r, eval=F, echo=T}
+# Rodar K-means e salvar resultado para 2 e 4 grupos, usando os PCs:
+
+set.seed(1234)
+clusters_kmean_k2_PCs <- kmeans(x = pcs_todos, centers = 2)
+set.seed(1234)
+clusters_kmean_k4_PCs <- kmeans(x = pcs_todos, centers = 4)
+
+# Atribuir os resultados das classificações nos objeto com os dados:
+pcs_todos_k2_res <- pcs_todos
+pcs_todos_k2_res$Grupos_k2 <- as.factor(clusters_kmean_k2_PCs$cluster)
+pcs_todos_k4_res <- pcs_todos
+pcs_todos_k4_res$Grupos_k4 <- as.factor(clusters_kmean_k4_PCs$cluster)
+
+# Visualizar os gráficos de dispersão entre PC1 e PC2, e PC1 e PC3 colorindo os pontos de acordo com os grupos resultantes:
+ggplot(pcs_todos_k2_res, aes(x=Dim.1, y=Dim.2, shape=Grupos_k2, color=Grupos_k2)) +
+        geom_point()
+
+ggplot(pcs_todos_k2_res, aes(x=Dim.1, y=Dim.3, shape=Grupos_k2, color=Grupos_k2)) +
+        geom_point()
+
+ggplot(pcs_todos_k4_res, aes(x=Dim.1, y=Dim.2, shape=Grupos_k4, color=Grupos_k4)) +
+        geom_point()
+
+ggplot(pcs_todos_k4_res, aes(x=Dim.1, y=Dim.3, shape=Grupos_k4, color=Grupos_k4)) +
+        geom_point()
+
+```
+
+Olhando os gráficos resultantes, é possível observar que usando os PCs, conseguimos separar muito bem dois grupos, mas quando tentamos separar em 4 grupos, parece que estamos capturando o efeito de outros PCs de menor importância.
+
+Como tanto a análise de genes individuais quanto a análise dos componentes principais indicaram que conseguimos separar claramente 2 grupos, vamos conferir se estes grupos são capazes de identificar os grupos reais das amostras (larva versus adulto, ou espaço versus Terra). Para isso, vamos fazer o download e carregar o arquivo que contém as classes corretas para estas duas características:[space_flies_key.txt](https://www.dropbox.com/s/tkdbpq6p2udzmb8/space_flies_key.txt?dl=1)
+
+```{r, eval=F, echo=T}
+# Carregar os dados
+grupos_flies <- read.table("space_flies_key.txt", header = T)
+
+#Combinar os dados de agrupamento com 2 grupos derivados da PCA com as categorias reais:
+dados_completos_k2 <- merge(pcs_todos_k2_res, grupos_flies, by.x="row.names", by.y="Amostra")
+
+```
+
+Por fim, vamos comparar a classificação derivada do K-means com 2 grupos nos dados de PCs, com as categorias reais relacionadas ao Desenvolvimento e ao Grupo:
+
+```{r, eval=F, echo=T}
+# Comparar Grupos_k2 com Desenvolvimento
+table(dados_completos_k2$Grupos_k2, dados_completos_k2$Desenvolvimento)
+
+# Comparar Grupos_k2 com Grupo (espaço/Terra)
+table(dados_completos_k2$Grupos_k2, dados_completos_k2$Grupo)
+
+```
+
+**Qual característica dos dados que a análise não-supervisionada de expressão gênica em larga escala foi capaz de classificar com exatidão?**
+
+
+### Conclusão
+
+Neste tutorial exploramos dois métodos comumente usados em análises de classificação não-supervisionadas: K-means e análise de componentes principais. Observamos que estes métodos são capazes de identificar estruturas inerentes dos dados, que podem ajudar a caracterizar as amostras, tanto do ponto de vista biológico, quanto identificar amostras que são muito diferentes das outras, ou que foram processadas em dias diferentes. É possível caracterizar agrupamentos que não podem ser explicados por outras variáveis, e que então merecem ser investigados por outras medidas nos dados. Observamos como pode ser importante reduzir a dimensionalidade dos dados para ter uma compreensão da variabilidade total dos dados, e como isso auxilia a identificar uma possível estrutura nos dados.
+
+Algumas ressalvas importantes que não abordamos neste tutorial, por conta do tempo: tratamento de dados ausentes (*missing data*) e normalização / escalonamento dos dados. Muitos dos métodos apresentados aqui são sensíveis à ausência de dados. Para resolver este problema é necessário realizar a imputação de dados ausentes. Embora seja uma representação não necessariamente fiel aos dados, é uma maneira de descontar o efeito da ausência de observações na estrutura geral dos dados. Algumas estratégias de imputação são apresentadas neste link: http://r-statistics.co/Missing-Value-Treatment-With-R.html
+
+Em relação à normalização, é importante que antes de realizar análises baseadas em distância e representação linear dos dados (como K means e PCA), os dados estejam na mesma escala. Isso evita que uma variável em uma escala completamente diferente influencie de maneira injusta o agrupamento. Existem diversas maneiras de normalizar os dados, e a mais comum é simplesmente aplicar o z-score (diferença entre o valor e a média, dividio pelo desvio padrão). Este link apresenta algumas estratégias de normalização, e como realizá-las no R: https://vitalflux.com/data-science-scale-normalize-numeric-data-using-r/

@@ -1,0 +1,17 @@
+---
+title: "Home"
+---
+
+Bem-vindos ao curso de **Introdução à aprendizagem de máquina (machine learning) aplicada à análise de dados genéticos**!
+
+Este site que contém o material prático que será utilizado durante as aulas. Utilize o menu acima para navegar entre os diferentes tutoriais, além do cronograma do curso.
+
+O link abaixo apresenta a instância EC2 da Amazon que hospeda o computador que iremos utilizar nas aulas práticas. O computador estará disponível apenas durante o período do curso.  
+
+- http://amazonec2.mazzottidr.org/
+
+Você deverá ter recebido um nome de usuário e senha para poder acessar o RStudio hospedado na instância da Amazon.
+
+Caso tenha alguma dúvida, entre em contato por email: mazzottidr@gmail.com
+
+

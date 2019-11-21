@@ -1,0 +1,128 @@
+---
+title: "Acesso à instância EC2 da Amazon (nuvem)"
+author: "Diego Mazzotti"
+date: "06/11/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Este tutorial contém instruções para acessar o computador remoto hospedado na Amazon, onde todo o conteúdo prático deste curso está organizado, e onde todas as análises serão realizadas. Ao concluir este tutorial, você será capaz de:
+
+- Acessar o RStudio hospedado em uma instância EC2 da Amazon
+- Explorar algumas funcionalidades do RStudio
+- Fazer download e upload de arquivos em seu computador local
+
+
+### EC2 da Amazon
+
+O serviço **Elastic Compute Cloud** (EC2) da Amazon (<https://aws.amazon.com/ec2/>) permite usuários acessarem diversas configurações de computadores para realização de tarefas na nuvem. Uma das principais características é a possiblidade de utilizar elevado poder computacional por apenas uma fração do custo de um sistema físico, como comprar um computador poderoso.  
+
+Neste curso, usaremos um computador remoto onde será possível ter acesso a todos os dados, bem como as ferramentas necessárias para análise destes dados. Este computador remoto já foi previamente configurado para este curso, mas caso tenha interesse em fazer a sua própria configuração para projetos futuros, [este site](http://www.louisaslett.com/RStudio_AMI/) apresenta mais detalhes. Todos os pacotes necesários para o curso também já foram instalados.
+
+A maior parte da interface do curso será realizada por meio do [RStudio](https://www.rstudio.com/), um ambiente de desenvolvimento integrado que apresenta uma interface mais amigável para a linguagem de programação [R](https://www.r-project.org/). O R apresenta inúmeras funções e comandos para análise de dados, inclusive diversos pacotes voltados à implementação de métodos e modelos de aprendizagem de máquina.
+
+### Acessando a instância deste curso
+
+A instância pré-configurada utilizada por este curso está disponível no link:
+
+- http://amazonec2.mazzottidr.org/
+
+Você deve usar o nome de usuário e senha fornecidos para fazer o login. Após autenticação, você será apresentado à janela principal do RStudio:
+
+![](../images/screenshot_Rstudio.PNG)
+
+Esta será a interface em que realizará a maioria das atividades relacionadas a este curso.
+
+### Funcionalidades do RStudio
+
+O Rstudio fornece diversas ferramentas para facilitar a análise, organização e visualização de dados. Existem 4 janelas principais, onde as seguintes tarefas são realizadas:  
+
+- **Editor de texto:** área onde os scripts são desenvolvidos. Algumas funcionalidades incluem realce de sintaxe, autocompletar funções enquanto digita, e rodar comandos usando atalhos no teclado (ex: Ctrl+Enter roda a linha selecionada). É possível ter mais de um script aberto, facilitando o acesso a diferentes projetos.
+- **Console:** área onde os comandos são rodados em si. A região do console é onde toda a interação com o R acontece. Em atualizações recentes do RStudio, há um aba no console que permite acessar um terminal Linux, facilitando interações diretas com o sistema Linux, caso necessário.
+- **Environment/History/Connections:** área que facilita o acesso aos objetos que foram criados, bem como o histórico de comandos que foram realizados anteriormente.
+- **Files/Plots/Packages/Help/Viewer:** área que permite o gerenciamento de arquivos, e facilita a navegação de diretórios e arquivos. Esta área também oferece a plataforma gráfica, onde os gráficos que você irá realizar são mostrados, e onde também a ajuda de funções do R é apresentada, quando solicitada.
+
+Existem outras funcionalidades, porém as mais importantes para este curso foram descritas acima.
+
+### Upload e download de arquivos
+
+Outra funcionalidade interessante do Rstudio é a possiblidade de facilmente transferir arquivos entre o computador local e o EC2 da Amazon. Para explorar esta funcionalidade, bem como relembrar alguns comandos básicos do R, faremos o seguinte exercício:
+
+1. Em seu diretório *home*, crie uma pasta (clique em *New Folder*, na aba *Files* à direita) chamada `CursoML2018`. Use o nome como está representado, sem espaços, para manter consistência.
+
+2. Altere o seu diretório de trabalho para a nova pasta `CursoML2018`, clicando na nova pasta, e em seguida em *More > Set As Working Directory*.
+
+3. Faça o download do seguinte arquivo, correspondente a dados simulados de 20 SNPs, em um total de 1600 indivíduos (800 casos e 800 controles) em seu computador local: [GAMETES_E3W_20atts_0.2H_EDM-1_1_clean.tsv](https://www.dropbox.com/s/5gazzk8z3qf93st/GAMETES_E3W_20atts_0.2H_EDM-1_1_clean.tsv?dl=1).
+
+4. Usando a função `Upload` no Rstudio, faça a transferência do arquivo `GAMETES_E3W_20atts_0.2H_EDM-1_1_clean.tsv` para a pasta `CursoML2018`. Ao finalizar o download, o arquivo deve aparecer na pasta correspondente.
+
+5. Para relembrar algumas funções básicas do R, bem como praticar alguns comandos, crie um novo script (*File > New File > Rscript*), copie e cole o conteúdo abaixo, e rode as operações indicadas:
+
+```{r, eval=F, echo=T}
+
+# Script para processamento básico de dados
+
+# Carregar pacotes necessários
+library(dplyr) # necessário para manipulação dos dados
+library(tableone) # necessário para comparações entre grupos e realizar tabelas
+library(jtools) # necessário para formatação dos resultados da regressão logística
+library(ggplot2) # necessário para realização dos gráficos
+
+# Carrregue o arquivo como um objeto do R
+sim_data <- read.table("GAMETES_E3W_20atts_0.2H_EDM-1_1_clean.tsv", header = T)
+
+# Explore as primeiras 5 linhas e 5 colunas do arquivo
+sim_data[1:5,1:5]
+
+# Explore o nome das colunas do arquivo
+colnames(sim_data)
+
+# Conte quantos casos e controles estão presentes no arquivo
+sim_data %>%
+        group_by(Status) %>%
+        summarize(N=n())
+
+# Conte os genótipos do SNP rs190962
+sim_data %>%
+        group_by(rs190962) %>%
+        summarize(N=n())
+
+# Conte os genótipos do SNP rs190962, separado para casos e controles
+sim_data %>%
+        group_by(Status, rs190962) %>%
+        summarize(N=n())
+
+# Crie uma tabela de contingência comparando a frequência absoluta, relativa e se há associação entre o SNP rs190962 e Status
+tabela1 <- CreateTableOne(vars = "rs190962", strata = "Status", factorVars = "rs190962", data = sim_data)
+
+# Crie uma tabela de contingência comparando a frequência absoluta, relativa e se há associação entre os 10 primeiros SNPs e Status
+snps1.10 <- colnames(sim_data)[3:12] # terceiro à décimo segundo nome das colunas
+tabela2 <- CreateTableOne(vars=snps1.10, strata = "Status", factorVars = snps1.10, data = sim_data)
+
+# Ajuste um modelo de regressão logística verificando associação entre SNP rs190962 e Status
+# Regressão logística:
+modelo_rs190962 <- glm(Status ~ as.factor(rs190962), data = sim_data, family = binomial(link='logit'))
+# Resultados:
+summ(modelo_rs190962, confint = T, exp = T)
+
+# Crie um gráfico mostrando os resultados da regressão logística em termos de odds ratio para o SNP rs123462
+graficoOR_rs190962 <- plot_summs(modelo_rs190962, exp = T, scale = TRUE) +
+  xlab("Odds Ratio\nRef. rs190962 genótipo 0")
+
+# Salve o gráfico resultante no arquivo "RegLog_rs190962.pdf"
+pdf("RegLog_rs190962.pdf")
+graficoOR_rs190962
+dev.off()
+```
+
+
+O resultado do último comando acima é um gráfico, em PDF, com os valores de odds ratio para os genótipos 1 e 2 do SNP rs190962, em relação à categoria de referência 0 deste SNP. Para observar o resultado, clique no arquivo `RegLog_rs190962.pdf` que apareceu na aba *Files*. Outra opção é selecionar este arquivo e clicar em *More > Export...*. Esta alternativa permite fazer o download de vários arquivos ao mesmo tempo em formato `.zip`.  
+
+Não esqueça de salvar o seu script, e se quiser fazer uma cópia em seu computador local, realizar o mesmo procedimento para exportar o script.
+
+### Comentários finais
+
+Neste tutorial inicial, foi possível realizar a conexão de seu computador local à instância EC2 da Amazon destinada para este curso, onde o RStudio foi inicialmente instalado. Também foi possível explorar algumas funcionalidades básicas do RStudio em um banco de dados simulados de variantes genéticas e um fenótipo do tipo caso-controle. Este mesmo banco de dados será utilizado para treinarmos e testarmos diferentes modelos de aprendizagem de máquina.

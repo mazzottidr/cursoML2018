@@ -1,0 +1,31 @@
+# Abaixo seguem alguns comandos úteis para o pré-processamento de dados para a Hackathon
+
+# Copiar os dados da Hackathon para o diretório de trabalho (R)
+file.copy(from = "/data/Dados_curso/", to = ".", recursive = T)
+
+# É possível acessar o terminal Linux ao clinar na aba "Terminal", próximo ao console do RStudio.
+
+
+
+### Genotipagem
+
+# Alguns comandos úteis para facilitar o processamento de dados de genotipagem (devem ser rodados na aba Terminal)
+
+# O comando abaixo recodifica todos os SNPs para o formato aditivo (número cópias de cada alelo: 0, 1 ou 2)
+plink --bfile BRFEP --recode A --out BRFED_additive
+
+#Caso tenha interesse em filtrar para uma liste pré-selecionada the SNPs, criar esta lista (um SNP por linha), salvar como SNPs.txt e rodar:
+plink --bfile BRFEP --recode A --extract SNPs.txt --out BRFEP_additive_SNPs
+
+# É possível agora importar o arquivo "BRFED_additive.raw" no R, no mesmo formato que foi importado anteriormente nos tutoriais (rodar estes no R):
+# Atenção, evite carregar TODOS os SNPs (ocupa muita memóeria). O ídeal é rodar este comando apenas para SNPs filtrados:
+
+dados_SNPs <- read.table("BRFEP_additive_SNPs.raw", header = T)
+
+### Expressão
+
+# Para carregar os dados de expressão, você pode usar o seguinte comando (no R):
+data <- read.table("FEP_Expressao_Clean.txt", header=T, sep="\t")
+
+# Será necessário transpor os dados (genes nas colunas, e indivíduos nas linhas). Use o comando abaixo para manter os nomes corretos das linhas e colunas:
+data_t = setNames(data.frame(t(data[,-1])), data[,1])

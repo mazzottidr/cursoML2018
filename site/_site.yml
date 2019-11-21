@@ -1,0 +1,21 @@
+name: "cursoML2018"
+navbar:
+  title: "Curso ML 2018"
+  left:
+    - text: "Home"
+      href: index.html
+    - text: "Cronograma"
+      href: crono.html
+    - text: "Acesso ao EC2"
+      href: aws_access.html
+    - text: "Modelos supervisionados"
+      href: ml_supervisionado.html
+    - text: "Modelos não-supervisionados"
+      href: ml_naosupervisionado.html
+    - text: "Dicas para Hackathon"
+      href: hackathon.html
+output:
+  html_document:
+    include:
+      after_body: footer.html
+      

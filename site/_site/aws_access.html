@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+
+<meta name="author" content="Diego Mazzotti" />
+
+<meta name="date" content="2018-06-11" />
+
+<title>Acesso à instância EC2 da Amazon (nuvem)</title>
+
+<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+</style>
+
+
+<style type="text/css">
+/* padding for bootstrap navbar */
+body {
+  padding-top: 51px;
+  padding-bottom: 40px;
+}
+/* offset scroll position for anchor links (for fixed navbar)  */
+.section h1 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+
+.section h2 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h3 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h4 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h5 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h6 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+</style>
+
+<script>
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.parent().addClass('active');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+});
+</script>
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+</script>
+
+<!-- code folding -->
+
+
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Curso ML 2018</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="crono.html">Cronograma</a>
+</li>
+<li>
+  <a href="aws_access.html">Acesso ao EC2</a>
+</li>
+<li>
+  <a href="ml_supervisionado.html">Modelos supervisionados</a>
+</li>
+<li>
+  <a href="ml_naosupervisionado.html">Modelos não-supervisionados</a>
+</li>
+<li class="dropdown-header">Dicas para Hackathon</li>
+<li>
+  <a href="hackathon.html"></a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Acesso à instância EC2 da Amazon (nuvem)</h1>
+<h4 class="author"><em>Diego Mazzotti</em></h4>
+<h4 class="date"><em>06/11/2018</em></h4>
+
+</div>
+
+
+<p>Este tutorial contém instruções para acessar o computador remoto hospedado na Amazon, onde todo o conteúdo prático deste curso está organizado, e onde todas as análises serão realizadas. Ao concluir este tutorial, você será capaz de:</p>
+<ul>
+<li>Acessar o RStudio hospedado em uma instância EC2 da Amazon</li>
+<li>Explorar algumas funcionalidades do RStudio</li>
+<li>Fazer download e upload de arquivos em seu computador local</li>
+</ul>
+<div id="ec2-da-amazon" class="section level3">
+<h3>EC2 da Amazon</h3>
+<p>O serviço <strong>Elastic Compute Cloud</strong> (EC2) da Amazon (<a href="https://aws.amazon.com/ec2/" class="uri">https://aws.amazon.com/ec2/</a>) permite usuários acessarem diversas configurações de computadores para realização de tarefas na nuvem. Uma das principais características é a possiblidade de utilizar elevado poder computacional por apenas uma fração do custo de um sistema físico, como comprar um computador poderoso.</p>
+<p>Neste curso, usaremos um computador remoto onde será possível ter acesso a todos os dados, bem como as ferramentas necessárias para análise destes dados. Este computador remoto já foi previamente configurado para este curso, mas caso tenha interesse em fazer a sua própria configuração para projetos futuros, <a href="http://www.louisaslett.com/RStudio_AMI/">este site</a> apresenta mais detalhes. Todos os pacotes necesários para o curso também já foram instalados.</p>
+<p>A maior parte da interface do curso será realizada por meio do <a href="https://www.rstudio.com/">RStudio</a>, um ambiente de desenvolvimento integrado que apresenta uma interface mais amigável para a linguagem de programação <a href="https://www.r-project.org/">R</a>. O R apresenta inúmeras funções e comandos para análise de dados, inclusive diversos pacotes voltados à implementação de métodos e modelos de aprendizagem de máquina.</p>
+</div>
+<div id="acessando-a-instancia-deste-curso" class="section level3">
+<h3>Acessando a instância deste curso</h3>
+<p>A instância pré-configurada utilizada por este curso está disponível no link:</p>
+<ul>
+<li><a href="http://amazonec2.mazzottidr.org/" class="uri">http://amazonec2.mazzottidr.org/</a></li>
+</ul>
+<p>Você deve usar o nome de usuário e senha fornecidos para fazer o login. Após autenticação, você será apresentado à janela principal do RStudio:</p>
+<p><img src="../images/screenshot_Rstudio.PNG" /></p>
+<p>Esta será a interface em que realizará a maioria das atividades relacionadas a este curso.</p>
+</div>
+<div id="funcionalidades-do-rstudio" class="section level3">
+<h3>Funcionalidades do RStudio</h3>
+<p>O Rstudio fornece diversas ferramentas para facilitar a análise, organização e visualização de dados. Existem 4 janelas principais, onde as seguintes tarefas são realizadas:</p>
+<ul>
+<li><strong>Editor de texto:</strong> área onde os scripts são desenvolvidos. Algumas funcionalidades incluem realce de sintaxe, autocompletar funções enquanto digita, e rodar comandos usando atalhos no teclado (ex: Ctrl+Enter roda a linha selecionada). É possível ter mais de um script aberto, facilitando o acesso a diferentes projetos.</li>
+<li><strong>Console:</strong> área onde os comandos são rodados em si. A região do console é onde toda a interação com o R acontece. Em atualizações recentes do RStudio, há um aba no console que permite acessar um terminal Linux, facilitando interações diretas com o sistema Linux, caso necessário.</li>
+<li><strong>Environment/History/Connections:</strong> área que facilita o acesso aos objetos que foram criados, bem como o histórico de comandos que foram realizados anteriormente.</li>
+<li><strong>Files/Plots/Packages/Help/Viewer:</strong> área que permite o gerenciamento de arquivos, e facilita a navegação de diretórios e arquivos. Esta área também oferece a plataforma gráfica, onde os gráficos que você irá realizar são mostrados, e onde também a ajuda de funções do R é apresentada, quando solicitada.</li>
+</ul>
+<p>Existem outras funcionalidades, porém as mais importantes para este curso foram descritas acima.</p>
+</div>
+<div id="upload-e-download-de-arquivos" class="section level3">
+<h3>Upload e download de arquivos</h3>
+<p>Outra funcionalidade interessante do Rstudio é a possiblidade de facilmente transferir arquivos entre o computador local e o EC2 da Amazon. Para explorar esta funcionalidade, bem como relembrar alguns comandos básicos do R, faremos o seguinte exercício:</p>
+<ol style="list-style-type: decimal">
+<li><p>Em seu diretório <em>home</em>, crie uma pasta (clique em <em>New Folder</em>, na aba <em>Files</em> à direita) chamada <code>CursoML2018</code>. Use o nome como está representado, sem espaços, para manter consistência.</p></li>
+<li><p>Altere o seu diretório de trabalho para a nova pasta <code>CursoML2018</code>, clicando na nova pasta, e em seguida em <em>More &gt; Set As Working Directory</em>.</p></li>
+<li><p>Faça o download do seguinte arquivo, correspondente a dados simulados de 20 SNPs, em um total de 1600 indivíduos (800 casos e 800 controles) em seu computador local: <a href="https://www.dropbox.com/s/5gazzk8z3qf93st/GAMETES_E3W_20atts_0.2H_EDM-1_1_clean.tsv?dl=1">GAMETES_E3W_20atts_0.2H_EDM-1_1_clean.tsv</a>.</p></li>
+<li><p>Usando a função <code>Upload</code> no Rstudio, faça a transferência do arquivo <code>GAMETES_E3W_20atts_0.2H_EDM-1_1_clean.tsv</code> para a pasta <code>CursoML2018</code>. Ao finalizar o download, o arquivo deve aparecer na pasta correspondente.</p></li>
+<li><p>Para relembrar algumas funções básicas do R, bem como praticar alguns comandos, crie um novo script (<em>File &gt; New File &gt; Rscript</em>), copie e cole o conteúdo abaixo, e rode as operações indicadas:</p></li>
+</ol>
+<pre class="r"><code># Script para processamento básico de dados
+
+# Carregar pacotes necessários
+library(dplyr) # necessário para manipulação dos dados
+library(tableone) # necessário para comparações entre grupos e realizar tabelas
+library(jtools) # necessário para formatação dos resultados da regressão logística
+library(ggplot2) # necessário para realização dos gráficos
+
+# Carrregue o arquivo como um objeto do R
+sim_data &lt;- read.table(&quot;GAMETES_E3W_20atts_0.2H_EDM-1_1_clean.tsv&quot;, header = T)
+
+# Explore as primeiras 5 linhas e 5 colunas do arquivo
+sim_data[1:5,1:5]
+
+# Explore o nome das colunas do arquivo
+colnames(sim_data)
+
+# Conte quantos casos e controles estão presentes no arquivo
+sim_data %&gt;%
+        group_by(Status) %&gt;%
+        summarize(N=n())
+
+# Conte os genótipos do SNP rs190962
+sim_data %&gt;%
+        group_by(rs190962) %&gt;%
+        summarize(N=n())
+
+# Conte os genótipos do SNP rs190962, separado para casos e controles
+sim_data %&gt;%
+        group_by(Status, rs190962) %&gt;%
+        summarize(N=n())
+
+# Crie uma tabela de contingência comparando a frequência absoluta, relativa e se há associação entre o SNP rs190962 e Status
+tabela1 &lt;- CreateTableOne(vars = &quot;rs190962&quot;, strata = &quot;Status&quot;, factorVars = &quot;rs190962&quot;, data = sim_data)
+
+# Crie uma tabela de contingência comparando a frequência absoluta, relativa e se há associação entre os 10 primeiros SNPs e Status
+snps1.10 &lt;- colnames(sim_data)[3:12] # terceiro à décimo segundo nome das colunas
+tabela2 &lt;- CreateTableOne(vars=snps1.10, strata = &quot;Status&quot;, factorVars = snps1.10, data = sim_data)
+
+# Ajuste um modelo de regressão logística verificando associação entre SNP rs190962 e Status
+# Regressão logística:
+modelo_rs190962 &lt;- glm(Status ~ as.factor(rs190962), data = sim_data, family = binomial(link=&#39;logit&#39;))
+# Resultados:
+summ(modelo_rs190962, confint = T, exp = T)
+
+# Crie um gráfico mostrando os resultados da regressão logística em termos de odds ratio para o SNP rs123462
+graficoOR_rs190962 &lt;- plot_summs(modelo_rs190962, exp = T, scale = TRUE) +
+  xlab(&quot;Odds Ratio\nRef. rs190962 genótipo 0&quot;)
+
+# Salve o gráfico resultante no arquivo &quot;RegLog_rs190962.pdf&quot;
+pdf(&quot;RegLog_rs190962.pdf&quot;)
+graficoOR_rs190962
+dev.off()</code></pre>
+<p>O resultado do último comando acima é um gráfico, em PDF, com os valores de odds ratio para os genótipos 1 e 2 do SNP rs190962, em relação à categoria de referência 0 deste SNP. Para observar o resultado, clique no arquivo <code>RegLog_rs190962.pdf</code> que apareceu na aba <em>Files</em>. Outra opção é selecionar este arquivo e clicar em <em>More &gt; Export…</em>. Esta alternativa permite fazer o download de vários arquivos ao mesmo tempo em formato <code>.zip</code>.</p>
+<p>Não esqueça de salvar o seu script, e se quiser fazer uma cópia em seu computador local, realizar o mesmo procedimento para exportar o script.</p>
+</div>
+<div id="comentarios-finais" class="section level3">
+<h3>Comentários finais</h3>
+<p>Neste tutorial inicial, foi possível realizar a conexão de seu computador local à instância EC2 da Amazon destinada para este curso, onde o RStudio foi inicialmente instalado. Também foi possível explorar algumas funcionalidades básicas do RStudio em um banco de dados simulados de variantes genéticas e um fenótipo do tipo caso-controle. Este mesmo banco de dados será utilizado para treinarmos e testarmos diferentes modelos de aprendizagem de máquina.</p>
+</div>
+
+<p>Copyright &copy; 2018 Diego R. Mazzotti, Ph.D. Todos os direitos reservados.</p>
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
